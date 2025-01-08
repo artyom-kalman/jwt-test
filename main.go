@@ -7,8 +7,8 @@ import (
 func main() {
 	const PORT = ":3030"
 
-	http.HandleFunc("/login", Login)
-	http.HandleFunc("/refreshToken", RefreshToken)
+	http.HandleFunc("/access-token", AccessToken)
+	http.HandleFunc("/refresh-token", RefreshToken)
 
 	err := http.ListenAndServe(PORT, nil)
 	if err != nil {

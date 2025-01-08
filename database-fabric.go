@@ -1,12 +1,12 @@
 package main
 
-var cachedDatabase map[string]*UsersDatabase = make(map[string]*UsersDatabase, 0)
+var cachedDatabase map[string]*AuthDB = make(map[string]*AuthDB, 0)
 
-func DatabaseFabric(path string) *UsersDatabase {
+func DatabaseFabric(path string) *AuthDB {
 	if cachedDatabase[path] != nil {
 		return cachedDatabase[path]
 	}
 
-	cachedDatabase[path] = NewUserDatabase(path)
+	cachedDatabase[path] = NewAuthDB(path)
 	return cachedDatabase[path]
 }

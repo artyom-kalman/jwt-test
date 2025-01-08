@@ -7,18 +7,18 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type UsersDatabase struct {
+type AuthDB struct {
 	connection *sql.DB
 	path       string
 }
 
-func NewUserDatabase(path string) *UsersDatabase {
-	return &UsersDatabase{
+func NewAuthDB(path string) *AuthDB {
+	return &AuthDB{
 		path: path,
 	}
 }
 
-func (db *UsersDatabase) openConnection() error {
+func (db *AuthDB) openConnection() error {
 	conn, err := sql.Open("sqlite3", db.path)
 	if err != nil {
 		return err
@@ -29,18 +29,62 @@ func (db *UsersDatabase) openConnection() error {
 	return nil
 }
 
-func (db *UsersDatabase) closeConnection() error {
+func (db *AuthDB) closeConnection() error {
 	return db.connection.Close()
 }
 
-func (db *UsersDatabase) UserExists(user *UserData) (bool, error) {
+func (db *AuthDB) GetUserById(userId string) (*UserData, error) {
+	err := db.openConnection()
+	if err != nil {
+		return nil, err
+	}
+	defer db.closeConnection()
+
+	var user UserData = UserData{
+		Id: userId,
+	}
+	query := fmt.Sprintf("SELECT username FROM users WHERE id = '%s';", userId)
+
+	err = db.connection.QueryRow(query).Scan(&user.Username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (db *AuthDB) GetUserByLogin(username string) (*UserData, error) {
+	err := db.openConnection()
+	if err != nil {
+		return nil, err
+	}
+	defer db.closeConnection()
+
+	var user UserData
+	query := fmt.Sprintf("SELECT * FROM users WHERE username = '%s';", username)
+
+	err = db.connection.QueryRow(query).Scan(&user.Username, &user.Password, &user.Id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (db *AuthDB) IsUserIdValid(userId string) (bool, error) {
 	err := db.openConnection()
 	if err != nil {
 		return false, err
 	}
 	defer db.closeConnection()
 
-	query := fmt.Sprintf("SELECT COUNT(*) FROM users WHERE username = '%s';", user.Username)
+	query := fmt.Sprintf("SELECT COUNT(*) FROM users WHERE id = '%s';", userId)
 	var count int
 
 	err = db.connection.QueryRow(query).Scan(&count)
@@ -51,7 +95,7 @@ func (db *UsersDatabase) UserExists(user *UserData) (bool, error) {
 	return count > 0, nil
 }
 
-func (db *UsersDatabase) IsPasswordCorrect(user *UserData) (bool, error) {
+func (db *AuthDB) IsPasswordCorrect(user *UserData) (bool, error) {
 	err := db.openConnection()
 	if err != nil {
 		return false, err
@@ -66,4 +110,20 @@ func (db *UsersDatabase) IsPasswordCorrect(user *UserData) (bool, error) {
 	}
 
 	return user.Password == password, nil
+}
+
+func (db *AuthDB) InsertRefteshToken(user *UserData, token string) error {
+	err := db.openConnection()
+	if err != nil {
+		return err
+	}
+	defer db.closeConnection()
+
+	query := fmt.Sprintf("INSERT INTO refresh_tokens (user_id, token) VALUES ('%s', '%s');", user.Id, token)
+	_, err = db.connection.Exec(query)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
