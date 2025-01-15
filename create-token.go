@@ -4,27 +4,33 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 var secret = []byte("secret")
 
-func CreateAccessToken(userData *UserData, iat int64) (string, error) {
+func CreateAccessToken(userData *UserData, iat int64) (string, string, error) {
+	tokenId := uuid.NewString()
+
 	claims := jwt.MapClaims{
-		"userId": userData.Id,
-		"userIp": userData.Ip,
-		"iat":    iat,
-		"exp":    time.Now().Add(time.Hour).Unix(),
+		"clientIp": userData.Ip,
+		"exp":      time.Now().Add(time.Hour).Unix(),
+		"id":       tokenId,
 	}
 
-	return createToken(claims)
+	token, err := createToken(claims)
+	if err != nil {
+		return "", "", err
+	}
+
+	return token, tokenId, nil
 }
 
-func CreateRefreshToken(userData *UserData, iat int64) (string, error) {
+func CreateRefreshToken(userData *UserData, tokenId string) (string, error) {
 	claims := jwt.MapClaims{
-		"userId": userData.Id,
-		"userIp": userData.Ip,
-		"iat":    iat,
-		"exp":    time.Now().Add(time.Hour * 48).Unix(),
+		"clientIp": userData.Ip,
+		"exp":      time.Now().Add(time.Hour * 48).Unix(),
+		"tokenId":  tokenId,
 	}
 
 	return createToken(claims)

@@ -112,14 +112,14 @@ func (db *AuthDB) IsPasswordCorrect(user *UserData) (bool, error) {
 	return user.Password == password, nil
 }
 
-func (db *AuthDB) InsertRefteshToken(user *UserData, token string) error {
+func (db *AuthDB) InsertRefteshToken(tokenId string, userId, token string) error {
 	err := db.openConnection()
 	if err != nil {
 		return err
 	}
 	defer db.closeConnection()
 
-	query := fmt.Sprintf("INSERT INTO refresh_tokens (user_id, token) VALUES ('%s', '%s');", user.Id, token)
+	query := fmt.Sprintf("INSERT INTO refresh_tokens (token_id, user_id, token) VALUES ('%s', '%s', '%s');", tokenId, userId, token)
 	_, err = db.connection.Exec(query)
 	if err != nil {
 		return err

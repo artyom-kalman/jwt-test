@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"net"
 	"net/http"
 	"time"
 )
@@ -23,7 +24,8 @@ func AccessToken(rw http.ResponseWriter, r *http.Request) {
 		log.Printf("Unsuccessful attempt: %s", userId)
 		return
 	}
-	user.Ip = r.RemoteAddr
+
+	user.ClientIp = getUserIpAddress(r)
 
 	accessToken, refreshToken, err := generateTokens(user)
 	if err != nil {
@@ -31,18 +33,23 @@ func AccessToken(rw http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
+	log.Printf("Tokens issued for %s\n", userId)
 
-	loginResponse := NewLoginResponse(accessToken, refreshToken)
-
-	jsonData, err := json.Marshal(loginResponse)
-	if err != nil {
-		http.Error(rw, "error authentication user", http.StatusInternalServerError)
-		log.Println(err)
-		return
-	}
+	issueResponse := NewIssueResponse(accessToken, refreshToken)
 
 	rw.Header().Set("Content-Type", "application/json")
-	rw.Write(jsonData)
+	json.NewEncoder(rw).Encode(issueResponse)
+}
+
+func getUserIpAddress(r *http.Request) string {
+	ipAddress := r.Header.Get("X-Real-Ip")
+	if ipAddress == "" {
+		ipAddress = r.Header.Get("X-Forwarded-For")
+	}
+	if ipAddress == "" {
+		ipAddress, _, _ = net.SplitHostPort(r.RemoteAddr)
+	}
+	return ipAddress
 }
 
 func getUserIdFromRequest(r *http.Request) (string, error) {
@@ -75,21 +82,23 @@ func getUserById(userId string) (*UserData, error) {
 
 func generateTokens(userData *UserData) (string, string, error) {
 	iat := time.Now().Unix()
-	accessToken, err := CreateAccessToken(userData, iat)
+	accessToken, tokenId, err := CreateAccessToken(userData, iat)
 	if err != nil {
 		return "", "", err
 	}
 
-	refreshToken, err := CreateRefreshToken(userData, iat)
+	refreshToken, err := CreateRefreshToken(userData, tokenId)
 	if err != nil {
 		return "", "", err
 	}
 
-	db := NewAuthDB("database/users.sql")
-	err = db.InsertRefteshToken(userData, refreshToken)
-	if err != nil {
-		return "", "", err
-	}
+	saveRefreshToken(tokenId, userData.Id, refreshToken)
 
 	return accessToken, refreshToken, nil
+}
+
+func saveRefreshToken(tokenId string, userId string, token string) error {
+	db := NewAuthDB("database/users.sql")
+
+	return db.InsertRefteshToken(tokenId, userId, token)
 }
