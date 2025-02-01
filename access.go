@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func AccessToken(rw http.ResponseWriter, r *http.Request) {
+func IssueTokenHandler(rw http.ResponseWriter, r *http.Request) {
 	userId, err := getUserIdFromRequest(r)
 	if err != nil {
 		http.Error(rw, "error reading request body", http.StatusInternalServerError)
@@ -25,7 +25,7 @@ func AccessToken(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.ClientIp = getUserIpAddress(r)
+	user.ClientIp = getClientIpAddress(r)
 
 	accessToken, refreshToken, err := generateTokens(user)
 	if err != nil {
@@ -41,7 +41,7 @@ func AccessToken(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(issueResponse)
 }
 
-func getUserIpAddress(r *http.Request) string {
+func getClientIpAddress(r *http.Request) string {
 	ipAddress := r.Header.Get("X-Real-Ip")
 	if ipAddress == "" {
 		ipAddress = r.Header.Get("X-Forwarded-For")

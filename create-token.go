@@ -13,7 +13,7 @@ func CreateAccessToken(userData *UserData, iat int64) (string, string, error) {
 	tokenId := uuid.NewString()
 
 	claims := jwt.MapClaims{
-		"clientIp": userData.Ip,
+		"clientIp": userData.ClientIp,
 		"exp":      time.Now().Add(time.Hour).Unix(),
 		"id":       tokenId,
 	}
@@ -28,9 +28,9 @@ func CreateAccessToken(userData *UserData, iat int64) (string, string, error) {
 
 func CreateRefreshToken(userData *UserData, tokenId string) (string, error) {
 	claims := jwt.MapClaims{
-		"clientIp": userData.Ip,
-		"exp":      time.Now().Add(time.Hour * 48).Unix(),
-		"tokenId":  tokenId,
+		"client_ip": userData.ClientIp,
+		"exp":       time.Now().Add(time.Hour * 48).Unix(),
+		"token_id":  tokenId,
 	}
 
 	return createToken(claims)

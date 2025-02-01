@@ -127,3 +127,21 @@ func (db *AuthDB) InsertRefteshToken(tokenId string, userId, token string) error
 
 	return nil
 }
+
+func (db *AuthDB) GetRefreshToken(tokenId string) (string, error) {
+	err := db.openConnection()
+	if err != nil {
+		return "", err
+	}
+	defer db.closeConnection()
+
+	query := fmt.Sprintf("SELECT token FROM refresh_tokens WHERE token_id = '%s'", tokenId)
+
+	var token string
+	err = db.connection.QueryRow(query).Scan(&token)
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
